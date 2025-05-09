@@ -1,0 +1,86 @@
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.log
+hs_err_pid*
+bin/
+out/
+
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+!/.mvn/wrapper/maven-wrapper.jar
+
+### IDE ###
+# VS Code
+.vscode/
+!.vscode/settings.json.example  # пример, если нужны шаблонные настройки
+
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+
+*.db
+*.trace.db
+/db/
+!src/main/resources/data.sql
+!src/main/resources/schema.sql
+
+build/
+.gradle/
+
+logs/
+*.log
+*.txt
+*.log.*
+
+.DS_Store
+Thumbs.db
+*.bak
+*.swp
+*.swo
+~$*
+
+ehthumbs.db
+[Tt]humbs.db
+Desktop.ini
+
+lombok.config
+
+jacoco.exec
+/site/
+
+**/surefire-reports/
+**/failsafe-reports/
+
+application.properties
+!src/main/resources/application.yml
+
+/test-results/
+/test-output/
+
+node_modules/
+dist/
+*.css.map
+*.js.map
+
+!.gitkeep
