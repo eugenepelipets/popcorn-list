@@ -12,12 +12,12 @@
 
 ```mermaid
 flowchart LR
-  Client[Client (Postman / Swagger UI / Frontend)] -->|HTTP requests| API[Spring Boot REST API]
-  API -->|Calls| Service[Service Layer]
-  Service -->|Transactions| Storage[Repository Layer (JdbcTemplate + SimpleJdbcInsert)]
-  Storage -->|JDBC| DB[(H2 / PostgreSQL)]
-  Service -->|Caching| Cache[Caffeine Cache (Genres, MPA)]
-  API -->|Documentation| Swagger[OpenAPI (springdoc)]
+    Client["Client (Postman/Swagger UI/Frontend)"] -->|HTTP requests| API["Spring Boot REST API"]
+    API -->|Calls| Service["Service Layer"]
+    Service -->|Transactions| Storage["Repository Layer (JdbcTemplate + SimpleJdbcInsert)"]
+    Storage -->|JDBC| DB[("H2/PostgreSQL")]
+    Service -->|Caching| Cache["Caffeine Cache (Genres, MPA)"]
+    API -->|Documentation| Swagger["OpenAPI (springdoc)"]
 ```
 
 **Component Layers:**
