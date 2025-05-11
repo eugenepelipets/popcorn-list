@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", uses = {GenreMapper.class, MpaMapper.class})
 public interface MovieMapper {
-    @Mapping(source = "mpaId", target = "mpa.id")
+    @Mapping(source = "mpa.id", target = "mpa.id")
     @Mapping(source = "genreIds", target = "genres", qualifiedByName = "mapGenreIds")
     Movie toEntity(MovieRequestDto dto);
 

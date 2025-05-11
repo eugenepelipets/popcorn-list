@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS friends (
-    id integer AUTO_INCREMENT,
-    user_id integer REFERENCES users (id),
-    friend_id integer REFERENCES users (id)
+    user_id integer REFERENCES users (id) ON DELETE CASCADE,
+    friend_id integer REFERENCES users (id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, friend_id)
 );
 
 CREATE TABLE IF NOT EXISTS mpa (
@@ -40,12 +40,15 @@ CREATE TABLE IF NOT EXISTS genres (
 );
 
 CREATE TABLE IF NOT EXISTS movies_genres (
-    id integer AUTO_INCREMENT,
-    movie_id integer REFERENCES movies (id),
-    genre_id integer REFERENCES genres (id)
+    movie_id integer REFERENCES movies (id) ON DELETE CASCADE,
+    genre_id integer REFERENCES genres (id) ON DELETE CASCADE,
+    PRIMARY KEY (movie_id, genre_id)
 );
 
 CREATE TABLE IF NOT EXISTS movies_likes (
     movie_id integer REFERENCES movies (id),
     user_id integer REFERENCES users (id)
 );
+
+CREATE INDEX idx_movies_likes_user ON movies_likes(user_id);
+CREATE INDEX idx_friends_user ON friends(user_id);

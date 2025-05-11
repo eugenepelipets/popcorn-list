@@ -21,6 +21,7 @@ public class MovieService {
 
     private final JdbcTemplate jdbcTemplate;
     private final MovieDbStorage movieDbStorage;
+    private final GenreService genreService;
 
     @Transactional
     public Movie create(Movie movie) {
@@ -48,22 +49,32 @@ public class MovieService {
         }
     }
 
+    @Transactional
     void updateMovieGenres(int movieId, List<Genre> genres) {
         jdbcTemplate.update("DELETE FROM movies_genres WHERE movie_id = ?", movieId);
 
-        if (genres != null && !genres.isEmpty()) {
-            Set<Integer> genreIds = genres.stream()
-                    .filter(Objects::nonNull)
-                    .map(Genre::getId)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
+        if (genres == null || genres.isEmpty())
+            return;
 
-            jdbcTemplate.batchUpdate(
-                    "INSERT INTO movies_genres (movie_id, genre_id) VALUES (?, ?)",
-                    genreIds.stream()
-                            .map(genreId -> new Object[] { movieId, genreId })
-                            .collect(Collectors.toList()));
-        }
+        Set<Integer> genreIds = genres.stream()
+                .filter(Objects::nonNull)
+                .map(Genre::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        genreIds.forEach(genreId -> {
+            try {
+                genreService.getGenreById(genreId);
+            } catch (NotFoundException e) {
+                throw new ValidationException("genreIds", "Genre with ID " + genreId + " does not exist");
+            }
+        });
+
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO movies_genres (movie_id, genre_id) VALUES (?, ?)",
+                genreIds.stream()
+                        .map(genreId -> new Object[] { movieId, genreId })
+                        .collect(Collectors.toList()));
     }
 
     public Collection<Movie> findAll() {

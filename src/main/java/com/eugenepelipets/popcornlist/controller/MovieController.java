@@ -1,73 +1,77 @@
 package com.eugenepelipets.popcornlist.controller;
 
 import lombok.RequiredArgsConstructor;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.eugenepelipets.popcornlist.dto.MovieRequestDto;
+import com.eugenepelipets.popcornlist.dto.MovieResponseDto;
+import com.eugenepelipets.popcornlist.mapper.MovieMapper;
 import com.eugenepelipets.popcornlist.model.Movie;
 import com.eugenepelipets.popcornlist.service.MovieService;
-
 import jakarta.validation.Valid;
-import java.util.Collection;
+import jakarta.validation.constraints.Positive;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/movies")
 @RequiredArgsConstructor
 public class MovieController {
     private final MovieService movieService;
-    private static final Logger log = LoggerFactory.getLogger(MovieController.class);
+    private final MovieMapper movieMapper;
 
     @PostMapping
-    public ResponseEntity<Movie> createMovie(@Valid @RequestBody Movie movie) {
-        log.info("POST /movies - Creating new movie: {}", movie);
-        Movie createdMovie = movieService.create(movie);
-        return ResponseEntity.ok(createdMovie);
+    public ResponseEntity<MovieResponseDto> createMovie(@Valid @RequestBody MovieRequestDto dto) {
+        Movie movie = movieMapper.toEntity(dto);
+        Movie created = movieService.create(movie);
+        MovieResponseDto response = movieMapper.toDto(created);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping
-    public ResponseEntity<Movie> updateMovie(@Valid @RequestBody Movie movie) {
-        log.info("PUT /movies - Updating movie with ID: {}", movie.getId());
-        Movie updatedMovie = movieService.update(movie);
-        return ResponseEntity.ok(updatedMovie);
+    public ResponseEntity<MovieResponseDto> updateMovie(@Valid @RequestBody MovieRequestDto dto) {
+        Movie movie = movieMapper.toEntity(dto);
+        Movie updated = movieService.update(movie);
+        MovieResponseDto response = movieMapper.toDto(updated);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<Collection<Movie>> getAllMovies() {
-        log.info("GET /movies - Retrieving all movies");
-        return ResponseEntity.ok(movieService.findAll());
+    public ResponseEntity<List<MovieResponseDto>> getAllMovies() {
+        List<MovieResponseDto> dtos = movieService.findAll()
+                .stream()
+                .map(movieMapper::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Movie> getMovieById(@PathVariable int id) {
-        log.info("GET /movies/{} - Retrieving movie by ID", id);
-        return ResponseEntity.ok(movieService.getMovieById(id));
+    public ResponseEntity<MovieResponseDto> getMovieById(
+            @PathVariable @Positive(message = "ID must be positive") int id) {
+        Movie movie = movieService.getMovieById(id);
+        return ResponseEntity.ok(movieMapper.toDto(movie));
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public ResponseEntity<Void> addLike(
-            @PathVariable int id,
-            @PathVariable int userId) {
-        log.info("PUT /movies/{}/like/{} - Adding like", id, userId);
+    public ResponseEntity<Void> addLike(@PathVariable int id, @PathVariable int userId) {
         movieService.addLike(id, userId);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public ResponseEntity<Void> removeLike(
-            @PathVariable int id,
-            @PathVariable int userId) {
-        log.info("DELETE /movies/{}/like/{} - Removing like", id, userId);
+    public ResponseEntity<Void> removeLike(@PathVariable int id, @PathVariable int userId) {
         movieService.removeLike(id, userId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/popular")
-    public ResponseEntity<Collection<Movie>> getPopularMovies(
-            @RequestParam(defaultValue = "10", required = false) Integer count) {
-        log.info("GET /movies/popular?count={} - Retrieving popular movies", count);
-        return ResponseEntity.ok(movieService.getPopularMovies(count));
+    public ResponseEntity<List<MovieResponseDto>> getPopularMovies(
+            @RequestParam(defaultValue = "10") Integer count) {
+        List<MovieResponseDto> dtos = movieService.getPopularMovies(count)
+                .stream()
+                .map(movieMapper::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 }

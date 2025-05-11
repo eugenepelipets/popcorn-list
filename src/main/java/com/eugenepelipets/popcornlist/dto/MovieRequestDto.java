@@ -21,7 +21,7 @@ public class MovieRequestDto {
     @Positive
     private int duration;
     @NotNull
-    private Integer mpaId;
+    private MpaDto mpa;
     private List<Integer> genreIds;
 
 }

@@ -13,7 +13,9 @@ import com.eugenepelipets.popcornlist.model.Movie;
 import com.eugenepelipets.popcornlist.model.Mpa;
 import com.eugenepelipets.popcornlist.model.Genre;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Array;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -25,7 +27,7 @@ public class MovieDbStorage implements MovieStorage {
     private static final String INSERT_GENRE = "INSERT INTO movies_genres (movie_id, genre_id) VALUES (?, ?)";
     private static final String DELETE_GENRES = "DELETE FROM movies_genres WHERE movie_id = ?";
     private static final String SELECT_POPULAR_MOVIES = """
-            SELECT
+            SELECT DISTINCT
                 m.id as movie_id, m.movie_name, m.description,
                 m.release_date, m.duration,
                 mpa.id as mpa_id, mpa.mpa_name,
@@ -40,14 +42,16 @@ public class MovieDbStorage implements MovieStorage {
             ORDER BY likes_count DESC
             LIMIT ?""";
     private static final String SELECT_ALL_MOVIES_WITH_GENRES = """
-            SELECT m.id as movie_id, m.movie_name, m.description,
+            SELECT m.id, m.movie_name, m.description,
                    m.release_date, m.duration,
-                   mpa.id as mpa_id, mpa.mpa_name,
-                   g.id as genre_id, g.genre_name
+                   mpa.id AS mpa_id, mpa.mpa_name,
+                   ARRAY_AGG(g.id) FILTER (WHERE g.id IS NOT NULL) AS genre_ids,
+                   ARRAY_AGG(g.genre_name) FILTER (WHERE g.genre_name IS NOT NULL) AS genre_names
             FROM movies m
             JOIN mpa ON m.mpa_id = mpa.id
             LEFT JOIN movies_genres mg ON m.id = mg.movie_id
-            LEFT JOIN genres g ON mg.genre_id = g.id""";
+            LEFT JOIN genres g ON mg.genre_id = g.id
+            GROUP BY m.id, mpa.id""";
 
     private final JdbcTemplate jdbcTemplate;
     private SimpleJdbcInsert simpleJdbcInsert;
@@ -131,42 +135,7 @@ public class MovieDbStorage implements MovieStorage {
 
     @Override
     public Collection<Movie> findAll() {
-        try {
-            Map<Integer, Movie> movieMap = new HashMap<>();
-
-            jdbcTemplate.query(SELECT_ALL_MOVIES_WITH_GENRES, rs -> {
-                int movieId = rs.getInt("movie_id");
-
-                Movie movie = movieMap.computeIfAbsent(movieId, id -> {
-                    try {
-                        return Movie.builder()
-                                .id(id)
-                                .name(rs.getString("movie_name"))
-                                .description(rs.getString("description"))
-                                .releaseDate(rs.getDate("release_date").toLocalDate())
-                                .duration(rs.getInt("duration"))
-                                .mpa(new Mpa(
-                                        rs.getInt("mpa_id"),
-                                        rs.getString("mpa_name")))
-                                .genres(new ArrayList<>())
-                                .build();
-                    } catch (SQLException e) {
-                        throw new DataOperationException("Error mapping movie", e);
-                    }
-                });
-
-                int genreId = rs.getInt("genre_id");
-                if (!rs.wasNull()) {
-                    movie.getGenres().add(new Genre(
-                            genreId,
-                            rs.getString("genre_name")));
-                }
-            });
-
-            return new ArrayList<>(movieMap.values());
-        } catch (DataAccessException e) {
-            throw new DataOperationException("Failed to retrieve movies", e);
-        }
+        return jdbcTemplate.query(SELECT_ALL_MOVIES_WITH_GENRES, this::mapRowToMovie);
     }
 
     @Override
@@ -218,7 +187,7 @@ public class MovieDbStorage implements MovieStorage {
 
     public Collection<Movie> getPopularMovies(int count) {
         try {
-            Map<Integer, Movie> movieMap = new LinkedHashMap<>(); // Сохраняем порядок
+            Map<Integer, Movie> movieMap = new LinkedHashMap<>();
 
             jdbcTemplate.query(SELECT_POPULAR_MOVIES, rs -> {
                 int movieId = rs.getInt("movie_id");
@@ -272,5 +241,46 @@ public class MovieDbStorage implements MovieStorage {
         if (movie.getMpa() == null) {
             throw new ValidationException("MPA rating cannot be null");
         }
+    }
+
+    private Movie mapRowToMovie(ResultSet rs, int rowNum) throws SQLException {
+        Array genreIdsArray = rs.getArray("genre_ids");
+        Array genreNamesArray = rs.getArray("genre_names");
+
+        List<Integer> genreIds = new ArrayList<>();
+        List<String> genreNames = new ArrayList<>();
+
+        if (genreIdsArray != null) {
+            Object[] ids = (Object[]) genreIdsArray.getArray();
+            for (Object id : ids) {
+                if (id != null) {
+                    genreIds.add(((Number) id).intValue());
+                }
+            }
+        }
+
+        if (genreNamesArray != null) {
+            Object[] names = (Object[]) genreNamesArray.getArray();
+            for (Object name : names) {
+                if (name != null) {
+                    genreNames.add((String) name);
+                }
+            }
+        }
+
+        List<Genre> genres = new ArrayList<>();
+        for (int i = 0; i < genreIds.size(); i++) {
+            genres.add(new Genre(genreIds.get(i), genreNames.get(i)));
+        }
+
+        return Movie.builder()
+                .id(rs.getInt("id"))
+                .name(rs.getString("movie_name"))
+                .description(rs.getString("description"))
+                .releaseDate(rs.getDate("release_date").toLocalDate())
+                .duration(rs.getInt("duration"))
+                .mpa(new Mpa(rs.getInt("mpa_id"), rs.getString("mpa_name")))
+                .genres(genres)
+                .build();
     }
 }

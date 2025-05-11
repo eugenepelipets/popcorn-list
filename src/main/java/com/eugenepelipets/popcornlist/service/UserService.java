@@ -48,12 +48,11 @@ public class UserService {
     @Transactional
     public void addFriend(int userId, int friendId) {
         validateFriendship(userId, friendId);
-        
+
         try {
             int updated = jdbcTemplate.update(
-                "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)",
-                userId, friendId
-            );
+                    "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)",
+                    userId, friendId);
             if (updated == 0) {
                 throw new DataOperationException("Failed to add friend");
             }
@@ -65,12 +64,11 @@ public class UserService {
     @Transactional
     public void removeFriend(int userId, int friendId) {
         validateFriendship(userId, friendId);
-        
+
         try {
             int updated = jdbcTemplate.update(
-                "DELETE FROM friends WHERE user_id = ? AND friend_id = ?",
-                userId, friendId
-            );
+                    "DELETE FROM friends WHERE user_id = ? AND friend_id = ?",
+                    userId, friendId);
             if (updated == 0) {
                 throw new NotFoundException("Friendship not found");
             }
@@ -81,54 +79,61 @@ public class UserService {
 
     private void validateFriendship(int userId, int friendId) {
         if (userId <= 0 || friendId <= 0) {
-            throw new ValidationException("Invalid user IDs");
+            throw new ValidationException("user IDs", "IDs must be positive");
         }
+
         if (userId == friendId) {
-            throw new ValidationException("Cannot add yourself as friend");
+            throw new ValidationException("user IDs", "Cannot add yourself as friend");
         }
+
+        try {
+            getUserById(userId);
+            getUserById(friendId);
+        } catch (NotFoundException e) {
+            throw new ValidationException("user IDs", "One or both users don't exist");
+        }
+
         if (friendshipExists(userId, friendId)) {
-            throw new AlreadyExistException("Already friends");
+            throw new AlreadyExistException("Friendship already exists");
         }
     }
 
     boolean friendshipExists(int userId, int friendId) {
         Integer count = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?",
-            Integer.class, userId, friendId
-        );
+                "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?",
+                Integer.class, userId, friendId);
         return count != null && count > 0;
     }
 
     public Collection<User> getFriendsByUserId(int userId) {
         return jdbcTemplate.query(
-            "SELECT u.* FROM users u JOIN friends f ON u.id = f.friend_id WHERE f.user_id = ?",
-            this::mapRowToUser, userId
-        );
+                "SELECT u.* FROM users u JOIN friends f ON u.id = f.friend_id WHERE f.user_id = ?",
+                this::mapRowToUser, userId);
     }
 
     public List<User> findCommonFriends(int userId1, int userId2) {
         return jdbcTemplate.query(
-            """
-            SELECT u.* FROM users u 
-            JOIN friends f1 ON u.id = f1.friend_id AND f1.user_id = ? 
-            JOIN friends f2 ON u.id = f2.friend_id AND f2.user_id = ?
-            """,
-            this::mapRowToUser, userId1, userId2
-        );
+                """
+                        SELECT u.* FROM users u
+                        JOIN friends f1 ON u.id = f1.friend_id AND f1.user_id = ?
+                        JOIN friends f2 ON u.id = f2.friend_id AND f2.user_id = ?
+                        """,
+                this::mapRowToUser, userId1, userId2);
     }
 
     public User getUserById(int id) {
-        if (id <= 0) throw new ValidationException("Invalid user ID");
+        if (id <= 0)
+            throw new ValidationException("Invalid user ID");
         return userDbStorage.getUserById(id);
     }
 
     private User mapRowToUser(ResultSet rs, int rowNum) throws SQLException {
         return User.builder()
-            .id(rs.getInt("id"))
-            .email(rs.getString("email"))
-            .login(rs.getString("login"))
-            .name(rs.getString("user_name"))
-            .birthday(rs.getDate("birthday").toLocalDate())
-            .build();
+                .id(rs.getInt("id"))
+                .email(rs.getString("email"))
+                .login(rs.getString("login"))
+                .name(rs.getString("user_name"))
+                .birthday(rs.getDate("birthday").toLocalDate())
+                .build();
     }
 }

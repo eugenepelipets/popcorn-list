@@ -37,7 +37,9 @@ public class UserDbStorage implements UserStorage {
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("email", user.getEmail());
         parameters.put("login", user.getLogin());
-        parameters.put("user_name", user.getName() == null || user.getName().isBlank() ? user.getLogin() : user.getName());
+        // UserDbStorage.java
+        parameters.put("user_name",
+                user.getName() == null || user.getName().isBlank() ? user.getLogin() : user.getName());
         parameters.put("birthday", user.getBirthday());
 
         try {
